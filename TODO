@@ -1,0 +1,7 @@
+Focuser
+=======
+- Supprimer la compensation en T°
+- Supprimer le choix control board
+- Position max en mm
+- Remplacer "max travel" par µm/pas ou pas/µm
+
