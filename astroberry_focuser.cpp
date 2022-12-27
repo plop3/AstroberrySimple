@@ -46,7 +46,6 @@ std::unique_ptr<AstroberryFocuser> astroberryFocuser(new AstroberryFocuser());
 
 #define MINMAX_MIN_POS 0 // lowest limit for focuser position
 #define MINMAX_MAX_POS 100000 // highest limit for focuser position
-#define MAX_RESOLUTION 32 // the highest resolution supported is 1/32 step
 #define TEMPERATURE_UPDATE_TIMEOUT (60 * 1000) // 60 sec
 #define TEMPERATURE_COMPENSATION_TIMEOUT (60 * 1000) // 60 sec
 
@@ -159,26 +158,14 @@ bool AstroberryFocuser::Connect()
 	gpio_dir = gpiod_chip_get_line(chip, BCMpinsN[0].value);
 	gpio_step = gpiod_chip_get_line(chip, BCMpinsN[1].value);
 	gpio_sleep = gpiod_chip_get_line(chip, BCMpinsN[2].value);
-	gpio_m1 = gpiod_chip_get_line(chip, BCMpinsN[3].value);
-	gpio_m2 = gpiod_chip_get_line(chip, BCMpinsN[4].value);
-	gpio_m3 = gpiod_chip_get_line(chip, BCMpinsN[5].value);
 
 	// Set initial state for gpios
 	gpiod_line_request_output(gpio_dir, "dir@astroberry_focuser", 1); // default direction is outward
 	gpiod_line_request_output(gpio_step, "step@astroberry_focuser", 0);
 	gpiod_line_request_output(gpio_sleep, "sleep@astroberry_focuser", 1); // start stepper in wake up state
-	gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-	gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-
-	// If A4988 controller, use additional GPIO
-	if ( MotorBoardS[1].s == ISS_ON )
-		gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
-	FocusAbsPosN[0].value = savePosition(-1) != -1 ? (int) savePosition(-1) * resolution / MAX_RESOLUTION : 0;
-
-	// preset resolution
-	setResolution(resolution);
+	FocusAbsPosN[0].value = savePosition(-1) != -1 ? (int) savePosition(-1) : 0;
 
 	// Lock Motor Board setting
 	MotorBoardSP.s=IPS_BUSY;
@@ -235,15 +222,6 @@ bool AstroberryFocuser::initProperties()
 {
 	INDI::Focuser::initProperties();
 
-	// Focuser Resolution
-	IUFillSwitch(&FocusResolutionS[0],"FOCUS_RESOLUTION_1","Full Step",ISS_ON);
-	IUFillSwitch(&FocusResolutionS[1],"FOCUS_RESOLUTION_2","1/2 Step",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[2],"FOCUS_RESOLUTION_4","1/4 Step",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[3],"FOCUS_RESOLUTION_8","1/8 Step",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[4],"FOCUS_RESOLUTION_16","1/16 Step",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[5],"FOCUS_RESOLUTION_32","1/32 Step",ISS_OFF);
-	IUFillSwitchVector(&FocusResolutionSP,FocusResolutionS,6,getDeviceName(),"FOCUS_RESOLUTION","Resolution",MAIN_CONTROL_TAB,IP_RW,ISR_1OFMANY,0,IPS_IDLE);
-
 	// Maximum focuser travel
 	IUFillNumber(&FocuserTravelN[0], "FOCUSER_TRAVEL_VALUE", "mm", "%0.0f", 10, 200, 10, 10);
 	IUFillNumberVector(&FocuserTravelNP, FocuserTravelN, 1, getDeviceName(), "FOCUSER_TRAVEL", "Max Travel", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
@@ -261,12 +239,9 @@ bool AstroberryFocuser::initProperties()
 
 	// BCM PINs setting
 	IUFillNumber(&BCMpinsN[0], "BCMPIN_DIR", "DIR", "%0.0f", 1, 27, 0, 23); // BCM23 = PIN16
-	IUFillNumber(&BCMpinsN[1], "BCMPIN_STEP", "STEP", "%0.0f", 1, 27, 0, 24); // BCM24 = PIN18
+	IUFillNumber(&BCMpinsN[1], "BCMPIN_STEP", "STEP", "%0.0f", 1, 27, 0, 25); // BCM24 = PIN18
 	IUFillNumber(&BCMpinsN[2], "BCMPIN_SLEEP", "SLEEP", "%0.0f", 1, 27, 0, 22); // BCM22 = PIN15
-	IUFillNumber(&BCMpinsN[3], "BCMPIN_M1", "M1", "%0.0f", 1, 27, 0, 17); // BCM17 = PIN11
-	IUFillNumber(&BCMpinsN[4], "BCMPIN_M2", "M2", "%0.0f", 1, 27, 0, 18); // BCM18 = PIN12
-	IUFillNumber(&BCMpinsN[5], "BCMPIN_M3", "M3", "%0.0f", 1, 27, 0, 27); // BCM27 = PIN13
-	IUFillNumberVector(&BCMpinsNP, BCMpinsN, 6, getDeviceName(), "BCMPINS", "BCM Pins", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+	IUFillNumberVector(&BCMpinsNP, BCMpinsN, 3, getDeviceName(), "BCMPINS", "BCM Pins", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
 	// Stepper standby setting
 	IUFillSwitch(&StepperStandbyS[0],"STEPPER_STANDBY_ON","Enable",ISS_ON);
@@ -361,7 +336,6 @@ bool AstroberryFocuser::updateProperties()
 		defineSwitch(&StepperStandbySP);
 		defineNumber(&StepperStandbyTimeNP);
 		defineText(&ActiveTelescopeTP);
-		defineSwitch(&FocusResolutionSP);
 		defineNumber(&FocuserTravelNP);
 		defineNumber(&FocuserInfoNP);
 		defineNumber(&FocusStepDelayNP);
@@ -385,7 +359,6 @@ bool AstroberryFocuser::updateProperties()
 		deleteProperty(StepperStandbySP.name);
 		deleteProperty(StepperStandbyTimeNP.name);
 		deleteProperty(ActiveTelescopeTP.name);
-		deleteProperty(FocusResolutionSP.name);
 		deleteProperty(FocuserTravelNP.name);
 		deleteProperty(FocuserInfoNP.name);
 		deleteProperty(FocusStepDelayNP.name);
@@ -576,109 +549,6 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			return true;
 		}
 
-		// handle focus resolution
-		if(!strcmp(name, FocusResolutionSP.name))
-		{
-			int last_resolution = resolution;
-			int current_switch = IUFindOnSwitchIndex(&FocusResolutionSP);
-
-			IUUpdateSwitch(&FocusResolutionSP, states, names, n);
-
-			//Resolution 1/1
-			if ( FocusResolutionS[0].s == ISS_ON )
-				resolution = 1;
-
-			//Resolution 1/2
-			if ( FocusResolutionS[1].s == ISS_ON )
-				resolution = 2;
-
-			//Resolution 1/4
-			if ( FocusResolutionS[2].s == ISS_ON )
-				resolution = 4;
-
-			//Resolution 1/8
-			if ( FocusResolutionS[3].s == ISS_ON )
-				resolution = 8;
-
-			//Resolution 1/16
-			if ( FocusResolutionS[4].s == ISS_ON )
-				resolution = 16;
-
-			//Resolution 1/32
-			if ( FocusResolutionS[5].s == ISS_ON )
-			{
-				if ( MotorBoardS[1].s == ISS_ON )
-				{
-					// reset switch to previous state if resolution is invalid
-					FocusResolutionS[current_switch].s = ISS_ON;
-					IDSetSwitch(&FocusResolutionSP, nullptr);
-
-					DEBUG(INDI::Logger::DBG_WARNING, "A4988 Control Board does not support this resolution.");
-					return false;
-				}
-				resolution = 32;
-			}
-
-			// Adjust position to a step in lower resolution
-			int position_adjustment = last_resolution * (FocusAbsPosN[0].value / last_resolution - (int) FocusAbsPosN[0].value / last_resolution);
-			if ( resolution < last_resolution && position_adjustment > 0 )
-			{
-				if ( (float) position_adjustment / last_resolution < 0.5)
-				{
-					position_adjustment *= -1;
-				} else {
-					position_adjustment = last_resolution - position_adjustment;
-				}
-				DEBUGF(INDI::Logger::DBG_SESSION, "Focuser position adjusted by %d steps at 1/%d resolution to sync with 1/%d resolution.", position_adjustment, last_resolution, resolution);
-				MoveAbsFocuser(FocusAbsPosN[0].value + position_adjustment);
-			}
-
-			setResolution(resolution);
-
-			// update values based on resolution
-			FocusMaxPosN[0].max = (int) FocusMaxPosN[0].max * resolution / last_resolution;
-			FocusMaxPosN[0].step = (int) FocusMaxPosN[0].step * resolution / last_resolution;
-			FocusMaxPosN[0].value = (int) FocusMaxPosN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusMaxPosNP, nullptr);
-			IUUpdateMinMax(&FocusMaxPosNP); // This call is not INDI protocol compliant
-
-			FocusAbsPosN[0].max = (int) FocusAbsPosN[0].max * resolution / last_resolution;
-			FocusAbsPosN[0].step = (int) FocusAbsPosN[0].step * resolution / last_resolution;
-			FocusAbsPosN[0].value = (int) FocusAbsPosN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusAbsPosNP, nullptr);
-			IUUpdateMinMax(&FocusAbsPosNP); // This call is not INDI protocol compliant
-
-			FocusRelPosN[0].max = (int) FocusRelPosN[0].max * resolution / last_resolution;
-			FocusRelPosN[0].step = (int) FocusRelPosN[0].step * resolution / last_resolution;
-			FocusRelPosN[0].value = (int) FocusRelPosN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusRelPosNP, nullptr);
-			IUUpdateMinMax(&FocusRelPosNP); // This call is not INDI protocol compliant
-
-			FocusSyncN[0].max = FocusSyncN[0].max * resolution / last_resolution;
-			FocusSyncN[0].step = FocusSyncN[0].step * resolution / last_resolution;
-			FocusSyncN[0].value = FocusSyncN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusSyncNP, nullptr);
-			IUUpdateMinMax(&FocusSyncNP); // This call is not INDI protocol compliant
-
-			FocusBacklashN[0].max = (int) FocusBacklashN[0].max * resolution / last_resolution;
-			FocusBacklashN[0].step = (int) FocusBacklashN[0].step * resolution / last_resolution;
-			FocusBacklashN[0].value = (int) FocusBacklashN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusBacklashNP, nullptr);
-			IUUpdateMinMax(&FocusBacklashNP); // This call is not INDI protocol compliant
-
-			PresetN[0].value = (int) PresetN[0].value * resolution / last_resolution;
-			PresetN[1].value = (int) PresetN[1].value * resolution / last_resolution;
-			PresetN[2].value = (int) PresetN[2].value * resolution / last_resolution;
-			IDSetNumber(&PresetNP, nullptr);
-
-			getFocuserInfo();
-
-			FocusResolutionSP.s = IPS_OK;
-			IDSetSwitch(&FocusResolutionSP, nullptr);
-			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser resolution set to 1/%d.", resolution);
-			return true;
-		}
-
 		// handle temperature compensation
 		if(!strcmp(name, TemperatureCompensateSP.name))
 		{
@@ -748,7 +618,6 @@ bool AstroberryFocuser::saveConfigItems(FILE *fp)
 	IUSaveConfigNumber(fp, &BCMpinsNP);
 	IUSaveConfigSwitch(fp, &StepperStandbySP);
 	IUSaveConfigNumber(fp, &StepperStandbyTimeNP);
-	IUSaveConfigSwitch(fp, &FocusResolutionSP);
 	IUSaveConfigSwitch(fp, &FocusReverseSP);
 	IUSaveConfigNumber(fp, &FocusMaxPosNP);
 	IUSaveConfigSwitch(fp, &FocusBacklashSP);
@@ -767,7 +636,7 @@ void AstroberryFocuser::TimerHit()
 	if (backlashTicksRemaining == 0 && focuserTicksRemaining == 0)
 	{
 		//save position to file
-		savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
+		savePosition((int) FocusAbsPosN[0].value); // always save at MAX_RESOLUTION
 
 		// update abspos value and status
 		FocusAbsPosNP.s = IPS_OK;
@@ -843,7 +712,7 @@ bool AstroberryFocuser::ReverseFocuser(bool enabled)
 
 bool AstroberryFocuser::SyncFocuser(uint32_t ticks)
 {
-	savePosition((int) ticks * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
+	savePosition((int) ticks); // always save at MAX_RESOLUTION
 	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser absolute position sync to %d", ticks);
     return true;
 }
@@ -943,103 +812,6 @@ void AstroberryFocuser::stepMotor()
 	msleep(FocusStepDelayN[0].value);
 	// step off
 	gpiod_line_set_value(gpio_step, 0);
-}
-
-void AstroberryFocuser::setResolution(int res)
-{
-	// Release lines
-	gpiod_line_release(gpio_m1);
-	gpiod_line_release(gpio_m2);
-	gpiod_line_release(gpio_m3);
-
-	if (MotorBoardS[0].s == ISS_ON) {
-
-		/* Stepper motor resolution settings for ==== DRV8834 =====
-		* 1) 1/1   - M1=0 M2=0
-		* 2) 1/2   - M1=1 M2=0
-		* 3) 1/4   - M1=floating M2=0
-		* 4) 1/8   - M1=0 M2=1
-		* 5) 1/16  - M1=1 M2=1
-		* 6) 1/32  - M1=floating M2=1
-		*/
-
-		switch(res)
-		{
-			case 1:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
-			case 2:	// 1:2
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
-			case 4:	// 1:4
-				gpiod_line_request_output_flags(gpio_m1, "m1@astroberry_focuser", GPIOD_LINE_REQUEST_FLAG_OPEN_DRAIN, 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
-			case 8:	// 1:8
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				break;
-			case 16:	// 1:16
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				break;
-			case 32:	// 1:32
-				gpiod_line_request_output_flags(gpio_m1, "m1@astroberry_focuser", GPIOD_LINE_REQUEST_FLAG_OPEN_DRAIN, 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				break;
-			default:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
-		}
-	}
-
-	if (MotorBoardS[1].s == ISS_ON) {
-
-		/* Stepper motor resolution settings ===== for A4988 =====
-		* 1) 1/1   - M1=0 M2=0 M3=0
-		* 2) 1/2   - M1=1 M2=0 M3=0
-		* 3) 1/4   - M1=0 M2=1 M3=0
-		* 4) 1/8   - M1=1 M2=1 M3=0
-		* 5) 1/16  - M1=1 M2=1 M3=1
-		*/
-
-		switch(res)
-		{
-			case 1:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 2:	// 1:2
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 4:	// 1:4
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 8:	// 1:8
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 16:	// 1:16
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 1);
-				break;
-			default:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-		}
-	}
 }
 
 int AstroberryFocuser::savePosition(int pos)

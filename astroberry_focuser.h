@@ -51,7 +51,6 @@ private:
 	virtual bool Disconnect();
 
 	virtual void stepMotor();
-	virtual void setResolution(int res);
 	virtual int savePosition(int pos);
 	virtual bool readDS18B20();
 	void getFocuserInfo();
@@ -62,8 +61,6 @@ private:
 	int temperatureCompensationID { -1 };
 	void temperatureCompensation();
 
-	ISwitch FocusResolutionS[6];
-	ISwitchVectorProperty FocusResolutionSP;
 	ISwitch MotorBoardS[2];
 	ISwitchVectorProperty MotorBoardSP;
 	ISwitch TemperatureCompensateS[2];
@@ -93,9 +90,6 @@ private:
 	struct gpiod_line *gpio_dir;
 	struct gpiod_line *gpio_step;
 	struct gpiod_line *gpio_sleep;
-	struct gpiod_line *gpio_m1;
-	struct gpiod_line *gpio_m2;
-	struct gpiod_line *gpio_m3;
 
 	int backlashTicksRemaining;
 	int focuserTicksRemaining;
