@@ -162,7 +162,7 @@ bool AstroberryFocuser::Connect()
 	// Set initial state for gpios
 	gpiod_line_request_output(gpio_dir, "dir@astroberry_focuser", 1); // default direction is outward
 	gpiod_line_request_output(gpio_step, "step@astroberry_focuser", 0);
-	gpiod_line_request_output(gpio_sleep, "sleep@astroberry_focuser", 1); // start stepper in wake up state
+	gpiod_line_request_output(gpio_sleep, "sleep@astroberry_focuser", 0); // start stepper in wake up state
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
 	FocusAbsPosN[0].value = savePosition(-1) != -1 ? (int) savePosition(-1) : 0;
@@ -200,7 +200,7 @@ bool AstroberryFocuser::Disconnect()
 	IERmTimer(temperatureCompensationID);
 
 	// Set stepper motor asleep
-	gpiod_line_set_value(gpio_sleep, 0);
+	gpiod_line_set_value(gpio_sleep, 1);
 
 	// Close device
 	gpiod_chip_close(chip);
@@ -758,10 +758,10 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 	IDSetNumber(&FocusRelPosNP, nullptr);
 
 	// motor wake up
-	if ( gpiod_line_get_value(gpio_sleep) == 0 )
+	if ( gpiod_line_get_value(gpio_sleep) == 1 )
 	{
 		IERmTimer(stepperStandbyID);
-		gpiod_line_set_value(gpio_sleep, 1);
+		gpiod_line_set_value(gpio_sleep, 0);
 		DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor waking up.");
 	}
 
@@ -997,7 +997,7 @@ void AstroberryFocuser::stepperStandby()
 	if (!isConnected())
 		return;
 
-	gpiod_line_set_value(gpio_sleep, 0); // set stepper motor asleep
+	gpiod_line_set_value(gpio_sleep, 1); // set stepper motor asleep
 	DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor going standby.");
 }
 
