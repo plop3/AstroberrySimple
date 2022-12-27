@@ -1,0 +1,9 @@
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/indi_astroberry_system.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/indi_astroberry_focuser.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/indi_astroberry_relays.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/edit_cache.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/rebuild_cache.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/list_install_components.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/install.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/install/local.dir
+/home/serge/Documents/Devel/astroberry-diy/build/CMakeFiles/install/strip.dir
