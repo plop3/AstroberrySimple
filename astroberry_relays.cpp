@@ -169,7 +169,7 @@ bool IndiAstroberryRelays::initProperties()
 {
 	// We init parent properties first
 	INDI::DefaultDevice::initProperties();
-
+	setDriverInterface(AUX_INTERFACE);
 	IUFillNumber(&BCMpinsN[0], "BCMPIN01", "Relay 1", "%0.0f", 1, 27, 0, 16); // BCM5 = PIN29
 	IUFillNumber(&BCMpinsN[1], "BCMPIN02", "Relay 2", "%0.0f", 1, 27, 0, 17); // BCM6 = PIN31
 	IUFillNumber(&BCMpinsN[2], "BCMPIN03", "Relay 3", "%0.0f", 1, 27, 0, 20); // BCM13 = PIN33
@@ -210,24 +210,6 @@ bool IndiAstroberryRelays::initProperties()
 	IUFillSwitch(&Switch4S[0], "SW4ON", "ON", ISS_OFF);
 	IUFillSwitch(&Switch4S[1], "SW4OFF", "OFF", ISS_ON);
 	IUFillSwitchVector(&Switch4SP, Switch4S, 2, getDeviceName(), "SWITCH_4", RelayLabelsT[3].text, MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-	/*
-	IUFillSwitch(&MasterSwitchS[0], "MASTERSWON", "ON", ISS_OFF);
-	IUFillSwitch(&MasterSwitchS[1], "MASTERSWOFF", "OFF", ISS_ON);
-	IUFillSwitchVector(&MasterSwitchSP, MasterSwitchS, 2, getDeviceName(), "MASTER_SWITCH", "ALL RELAYS", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-	*/
-
-	/*
-    IUFillLight(&SwitchStatusL[0], RelayLabelsT[0].text, "", IPS_IDLE);
-    IUFillLight(&SwitchStatusL[1], RelayLabelsT[1].text, "", IPS_IDLE);
-    IUFillLight(&SwitchStatusL[2], RelayLabelsT[2].text, "", IPS_IDLE);
-    IUFillLight(&SwitchStatusL[3], RelayLabelsT[3].text, "", IPS_IDLE);
-    IUFillLight(&SwitchStatusL[4], RelayLabelsT[4].text, "", IPS_IDLE);
-    IUFillLight(&SwitchStatusL[5], RelayLabelsT[5].text, "", IPS_IDLE);
-    IUFillLight(&SwitchStatusL[6], RelayLabelsT[6].text, "", IPS_IDLE);
-    IUFillLight(&SwitchStatusL[7], RelayLabelsT[7].text, "", IPS_IDLE);
-    IUFillLightVector(&SwitchStatusLP, SwitchStatusL, 4, getDeviceName(), "Status", "", MAIN_CONTROL_TAB, IPS_IDLE);
-	*/
 
 	// Set initial relays states to OFF
 	for (int i=0; i < 4; i++) {
