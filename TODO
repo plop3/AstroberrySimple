@@ -5,3 +5,4 @@ Focuser
 - Position max en mm
 - Remplacer "max travel" par µm/pas ou pas/µm
 
+- Possibilité de 2 profils de focuser

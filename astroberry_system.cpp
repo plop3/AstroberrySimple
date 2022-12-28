@@ -219,7 +219,7 @@ bool IndiAstroberrySystem::initProperties()
 {
 	// We init parent properties first
 	INDI::DefaultDevice::initProperties();
-
+	setDriverInterface(AUX_INTERFACE);
 	IUFillText(&SysTimeT[0],"LOCAL_TIME","Local Time",NULL);
 	IUFillText(&SysTimeT[1],"UTC_OFFSET","UTC Offset",NULL);
 	IUFillTextVector(&SysTimeTP,SysTimeT,2,getDeviceName(),"SYSTEM_TIME","System Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
